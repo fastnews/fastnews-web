@@ -1,0 +1,13 @@
+{
+  "short_name": "faster-news",
+  "name": "Faster News &#9889;",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "./",
+  "display": "standalone"
+}
