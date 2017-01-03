@@ -17,23 +17,21 @@ class App extends Component {
     this.setState(props)
   }
 
-  link = event => {
-    event.preventDefault();
-    history.push({
-      pathname: event.currentTarget.pathname,
-      search: event.currentTarget.search
-    });
-  };
-
   refresh(){
-    this.setState({refresh:true, location: ""});
+    location.hash = "";
+    this.setState({refresh:true, location: "", selected: null});
+  }
+
+  refreshPage(){
+    window.location.hash = "";
+    window.location.reload(true);
   }
 
   render() {
     return (
       <Layout fixedHeader>
-        <Header title="Siste nyheter" style={{backgroundColor:'rgb(61, 51, 148)'}}>
-          <IconButton name="replay" onClick={this.refresh}/>
+        <Header title="Siste nyheter" onClick={this.refreshPage} style={{backgroundColor:'rgb(61, 51, 148)'}}>
+          { !this.state.location && <IconButton name="replay" onClick={this.refresh}/> }
         </Header>
   {/**      <Drawer title="Meny">
           <Navigation>
@@ -42,7 +40,6 @@ class App extends Component {
         </Drawer>
   **/}
         <Content id="content">
-          {this.state.location && <IconButton name="arrow_back" onClick={window.history.back()}/>}
           <MyNews {...this.state}/>   
         </Content>
       </Layout>

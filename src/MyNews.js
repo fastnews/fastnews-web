@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import request from 'superagent';
 
-import { List, ListItem, Icon, ListItemContent, ListItemAction, Spinner } from 'react-mdl';
+import { List, ListItem, Icon, IconButton, ListItemContent, ListItemAction, Spinner } from 'react-mdl';
 
 /**
  * TODO
@@ -10,7 +10,6 @@ import { List, ListItem, Icon, ListItemContent, ListItemAction, Spinner } from '
  * Save articles when loaded
  * If (wifi) download articles
  * 
- * Loading indicator
  * 
  * Fade in news list with broken icon if article fetch failed
  * ?Local news - select region
@@ -23,7 +22,7 @@ export class MyNews extends Component {
 
   YQL = location.protocol + '//query.yahooapis.com/v1/public/yql';
 
-  ARTICLE_API  = location.protocol + '//runkit.io/snapper/article/5.1.0'
+  ARTICLE_API = location.protocol + '//runkit.io/snapper/article/5.1.0'
 
   query = (...urls) => {
     const all = urls.map(u => `"${u}"`).join(',');
@@ -38,8 +37,9 @@ export class MyNews extends Component {
 
   constructor(props) {
     super(props);
-    this.load = this.load.bind(this)
+    this.load = this.loadNews.bind(this)
     this.show = this.show.bind(this)
+    this.back = this.back.bind(this)
     // get from cache
     this.state = { news: [], location: props.location }
     if (props.location)
@@ -47,18 +47,18 @@ export class MyNews extends Component {
   }
 
   componentWillReceiveProps(props, oldProps) {
-    if ( !props.location && props.refresh) { // silly, move state up
-      this.load();
+    if (!props.location && props.refresh) { // silly, move state up
+      this.loadNews();
       return;
     }
     this.show(props.location)
   }
 
   componentDidMount() {
-    this.load();
+    this.loadNews();
   }
 
-  load() {
+  loadNews() {
     request
       .get(this.YQL)
       .query(this.query(this.GN))
@@ -68,35 +68,45 @@ export class MyNews extends Component {
         if (err || !res.ok) {
           console.log(err);
         } else {
-          this.setState({ dt: Date.now(), news: res.body.query.results.item.map(i => Object.assign({}, i, { id: Math.random() * 10, link: 'http' + i.link.split('http')[2] })) })
+          this.setState({ dt: Date.now(), news: res.body.query.results.item.map(i => Object.assign({}, i, { id: i.link.hashCode(), link: 'http' + i.link.split('http')[2] })) })
         }
       });
   }
 
   show(id) {
     const item = this.state.news.find(x => x.id === Number(id));
+
+    // redirect to root if not found
     if (!item) {
-      this.setState({ selected: null })
+      window.location.hash = "";
       return
     }
-    
+
     item.waiting = true;
-    this.setState({waiting:true})
+    this.setState({ waiting: true })
 
     request.get(this.ARTICLE_API).query({ url: item.link, lang: 'no' }).then(res => {
       console.log("runkit", res.body.perf)
-      document.getElementById("content").scrollTop = 0;
       item.waiting = false;
       this.setState({ selected: res.body, waiting: false })
     });
   }
 
+  back(){
+    this.setState({selected: null});
+    window.location.hash = null;
+  }
+
   render() {
 
-    const spinner = <Spinner style={{right:'5px', position:'fixed'}}/>;
+    const spinner = <Spinner style={{ right: '5px', position: 'absolute' }} />;
+    
+    let article = null;
 
     if (this.state.selected) {
-      return <div>
+      setTimeout( ()=> {document.getElementById("content").scrollTop = 0}, 200)
+      article = <div>
+        { this.props.location && <IconButton name="arrow_back" onClick={ this.back }/>}
         <h3 style={{ marginLeft: '6px' }}>{this.state.selected.title} {this.state.waiting && spinner} </h3>
         <pre style={{ whiteSpace: 'pre-wrap', marginLeft: '5px', marginRight: '10px', fontSize: '18px', paddingBottom: '40px', fontFamily: 'Georgia,Cambria,"Times New Roman",Times,serif' }}>{this.state.selected.text}</pre>
       </div>
@@ -104,23 +114,27 @@ export class MyNews extends Component {
 
     let t = this;
     var items = this.state.news.map(function (item) {
-      return (
+      
+      return article && item.id === t.state.selected.id ? undefined : (
 
-        <ListItem twoLine style={{ paddingBottom: 10, paddingTop: 0, minHeight: 40, borderBottom: '1px solid lightgray' }}>
-          <ListItemContent subtitle={new Date(item.pubDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} style={{ padding: 0, minHeight: 0 }}>
-            <a style={{ textDecoration: 'none', cursor: 'pointer' }} href={`#${item.id}`} >
+        <a style={{ textDecoration: 'none' }} href={'#' + item.id}  >
+          <ListItem twoLine style={{ paddingBottom: 10, paddingTop: 0, minHeight: 40, borderBottom: '1px solid lightgray' }}>
+            <ListItemContent subtitle={new Date(item.pubDate).toLocaleTimeString()} style={{ padding: 0, minHeight: 0 }}>
               {item.title} {item.waiting && spinner}
-            </a>
-          </ListItemContent>
-        </ListItem>
+            </ListItemContent>
+          </ListItem>
+        </a>
       );
-    });
+    }).filter(exists=>exists);
 
     if (items.length) {
       return (
-        <List style={{ marginLeft: '6px', marginTop: 0 }}>
-          {items}
-        </List>
+        <div>
+          { article }
+          <List style={{ marginLeft: '6px', marginTop: 0 }}>
+            {items}
+          </List>
+        </div>
       );
     } else {
       return null;
