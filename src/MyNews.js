@@ -1,7 +1,10 @@
-import React, { Component } from 'react';
+import React, {Component} from 'react'
 import request from 'superagent';
-
-import { List, ListItem, Icon, IconButton, ListItemContent, ListItemAction, Spinner } from 'react-mdl';
+import {get,set} from './store'
+import { List, ListItem,  ListItemContent, ListItemAction } from 'react-mdl/lib/List';
+import { Icon } from 'react-mdl/lib/Icon'
+import IconButton from 'react-mdl/lib/IconButton'
+import Spinner  from 'react-mdl/lib/Spinner'
 
 /**
  * TODO
@@ -24,6 +27,22 @@ export class MyNews extends Component {
 
   ARTICLE_API = location.protocol + '//runkit.io/snapper/article/5.1.0'
 
+  normalizeTitle = o => {
+    const t = o.title.split(' - ');
+    if(t.length > 1){
+      o.source = t[1];
+      t.pop()
+    }
+    o.title = t.join()
+  }
+
+  createArticle = i => {
+    this.normalizeTitle(i);
+    return Object.assign({}, i, { 
+      id: i.link.hashCode(), 
+      link: 'http' + i.link.split('http')[2]
+    })
+  }
   query = (...urls) => {
     const all = urls.map(u => `"${u}"`).join(',');
     console.log(all)
@@ -59,6 +78,13 @@ export class MyNews extends Component {
   }
 
   loadNews() {
+    const t = this;
+
+    if(!!get('news')){
+      this.setState({dt: Date.now(), news: get('news')})
+      return;
+    }
+
     request
       .get(this.YQL)
       .query(this.query(this.GN))
@@ -68,7 +94,8 @@ export class MyNews extends Component {
         if (err || !res.ok) {
           console.log(err);
         } else {
-          this.setState({ dt: Date.now(), news: res.body.query.results.item.map(i => Object.assign({}, i, { id: i.link.hashCode(), link: 'http' + i.link.split('http')[2] })) })
+          this.setState({ dt: Date.now(), news: res.body.query.results.item.map(t.createArticle) })
+          set('news', this.state.news)
         }
       });
   }
@@ -82,6 +109,12 @@ export class MyNews extends Component {
       return
     }
 
+    const cachedArticle = get(item.link.hashCode())
+    if(!!cachedArticle){
+      this.setState({selected: cachedArticle, waiting: false})
+      return;
+    }
+
     item.waiting = true;
     this.setState({ waiting: true })
 
@@ -89,6 +122,7 @@ export class MyNews extends Component {
       console.log("runkit", res.body.perf)
       item.waiting = false;
       this.setState({ selected: res.body, waiting: false })
+      set(item.link.hashCode(), res.body)
     });
   }
 
@@ -106,7 +140,7 @@ export class MyNews extends Component {
     if (this.state.selected) {
       setTimeout( ()=> {document.getElementById("content").scrollTop = 0}, 200)
       article = <div>
-        { this.props.location && <IconButton name="arrow_back" onClick={ this.back }/>}
+        { this.props.location && <IconButton id="backbtn" name="arrow_back" onClick={ this.back }/>}
         <h3 style={{ marginLeft: '6px' }}>{this.state.selected.title} {this.state.waiting && spinner} </h3>
         <pre style={{ whiteSpace: 'pre-wrap', marginLeft: '5px', marginRight: '10px', fontSize: '18px', paddingBottom: '40px', fontFamily: 'Georgia,Cambria,"Times New Roman",Times,serif' }}>{this.state.selected.text}</pre>
       </div>
@@ -117,9 +151,9 @@ export class MyNews extends Component {
       
       return article && item.id === t.state.selected.id ? undefined : (
 
-        <a style={{ textDecoration: 'none' }} href={'#' + item.id}  >
+    <a style={{ textDecoration: 'none' }} href={'#' + item.id} key={item.id} >
           <ListItem twoLine style={{ paddingBottom: 10, paddingTop: 0, minHeight: 40, borderBottom: '1px solid lightgray' }}>
-            <ListItemContent subtitle={new Date(item.pubDate).toLocaleTimeString()} style={{ padding: 0, minHeight: 0 }}>
+            <ListItemContent subtitle={new Date(item.pubDate).toLocaleTimeString() + `  -  ${item.source || ''}`} style={{ padding: 0, minHeight: 0 }}>
               {item.title} {item.waiting && spinner}
             </ListItemContent>
           </ListItem>

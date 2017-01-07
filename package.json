@@ -9,6 +9,8 @@
   },
   "dependencies": {
     "history": "^4.5.0",
+    "preact": "^7.1.0",
+    "preact-compat": "^3.9.4",
     "react": "^15.4.0",
     "react-dom": "^15.4.0",
     "react-mdl": "^1.9.0",

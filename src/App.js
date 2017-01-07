@@ -1,9 +1,9 @@
-import React, { Component } from 'react';
+import React,{Component} from 'react'
 import './App.css';
 import logo from './logo.svg';
-import history from 'history';
-import { Layout, Header, Spinner, Navigation, Content, IconButton } from 'react-mdl';
+import { Layout, Header, Navigation, Content } from 'react-mdl/lib/Layout';
 import { MyNews } from './MyNews';
+import IconButton from 'react-mdl/lib/IconButton'
 
 class App extends Component {
 
@@ -19,6 +19,7 @@ class App extends Component {
 
   refresh(){
     location.hash = "";
+    localStorage.clear()
     this.setState({refresh:true, location: "", selected: null});
   }
 

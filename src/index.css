@@ -7,3 +7,14 @@ a{
   color: darkred;
   cursor: pointer;
 }
+
+#backbtn{
+  color: white;
+  background-color: rgba(255, 0, 129, 0.62);
+  left: 10px;
+  top: 10px;
+}
+  #backbtn > i {
+    font-size: 30px;
+    left: 13px;
+  }
