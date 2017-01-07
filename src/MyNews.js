@@ -25,18 +25,18 @@ export class MyNews extends Component {
 
   YQL = location.protocol + '//query.yahooapis.com/v1/public/yql';
 
-  ARTICLE_API = location.protocol + '//runkit.io/snapper/article/5.1.0'
+  ARTICLE_API = (location.protocol || 'https:') + '//runkit.io/snapper/article/5.1.0'
 
   normalizeTitle = o => {
     const t = o.title.split(' - ');
-    if(t.length > 1){
+    if(t.length > 1 && t[1].length < 50){
       o.source = t[1];
       t.pop()
     }
     o.title = t.join()
   }
 
-  createArticle = i => {
+  createArticleItem = i => {
     this.normalizeTitle(i);
     return Object.assign({}, i, { 
       id: i.link.hashCode(), 
@@ -59,6 +59,7 @@ export class MyNews extends Component {
     this.load = this.loadNews.bind(this)
     this.show = this.show.bind(this)
     this.back = this.back.bind(this)
+    this.getArticle = this.getArticle.bind(this)
     // get from cache
     this.state = { news: [], location: props.location }
     if (props.location)
@@ -67,7 +68,12 @@ export class MyNews extends Component {
 
   componentWillReceiveProps(props, oldProps) {
     if (!props.location && props.refresh) { // silly, move state up
-      this.loadNews();
+      this.loadNews()
+      return;
+    }
+    if(this.state.news.length && props.location === "download"){
+      console.log("downloading all..")
+      Promise.all( this.state.news.map( n => this.getArticle(n) )).then( res => console.log("all downloaded", res) )
       return;
     }
     this.show(props.location)
@@ -85,7 +91,7 @@ export class MyNews extends Component {
       return;
     }
 
-    request
+    return request
       .get(this.YQL)
       .query(this.query(this.GN))
       //.set('XX-API-Key', 'foobar')
@@ -94,7 +100,7 @@ export class MyNews extends Component {
         if (err || !res.ok) {
           console.log(err);
         } else {
-          this.setState({ dt: Date.now(), news: res.body.query.results.item.map(t.createArticle) })
+          this.setState({ dt: Date.now(), news: res.body.query.results.item.map(t.createArticleItem) })
           set('news', this.state.news)
         }
       });
@@ -105,7 +111,7 @@ export class MyNews extends Component {
 
     // redirect to root if not found
     if (!item) {
-      window.location.hash = "";
+      setTimeout(()=>window.location.hash = "",10);
       return
     }
 
@@ -118,12 +124,22 @@ export class MyNews extends Component {
     item.waiting = true;
     this.setState({ waiting: true })
 
-    request.get(this.ARTICLE_API).query({ url: item.link, lang: 'no' }).then(res => {
-      console.log("runkit", res.body.perf)
-      item.waiting = false;
-      this.setState({ selected: res.body, waiting: false })
-      set(item.link.hashCode(), res.body)
-    });
+    this.getArticle(item).then(article => {
+        this.setState({ selected: article, waiting: false })
+    })
+  }
+
+  getArticle(articleRef){
+    console.log("getting", articleRef)
+    return request.get(this.ARTICLE_API).query({ url: articleRef.link, lang: 'no' }).then(res => {
+        if(!res.ok){
+          console.log("error", res)
+        }
+        console.log("runkit", res.body.perf)
+        articleRef.waiting = false;
+        set(articleRef.link.hashCode(), res.body)
+        return res.body;
+      });
   }
 
   back(){
@@ -137,7 +153,7 @@ export class MyNews extends Component {
     
     let article = null;
 
-    if (this.state.selected) {
+    if (!!this.state.selected) {
       setTimeout( ()=> {document.getElementById("content").scrollTop = 0}, 200)
       article = <div>
         { this.props.location && <IconButton id="backbtn" name="arrow_back" onClick={ this.back }/>}

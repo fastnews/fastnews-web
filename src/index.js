@@ -6,6 +6,11 @@ import 'react-mdl/extra/material.css';
 import 'react-mdl/extra/material.js';
 import './index.css';
 
+window.onerror = (err,a,b,c) => {
+  if(process.env.NODE_ENV === 'production') return;
+  debugger;
+}
+
 String.prototype.hashCode = function() {
   var hash = 0, i, chr, len;
   if (this.length === 0) return hash;
