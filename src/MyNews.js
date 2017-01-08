@@ -136,10 +136,12 @@ export class MyNews extends Component {
       .set('Accept', 'application/json')
       .then(res => {
         if (!res.ok) {
+          articleRef.unsynced = true
           console.log("error", res)
         }
         console.log("runkit", res.body.perf)
         articleRef.waiting = false;
+        articleRef.unsynced = undefined;
         set(articleRef.link.hashCode(), res.body)
         return res.body;
       })
