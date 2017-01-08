@@ -11,6 +11,7 @@ window.onerror = (err,a,b,c) => {
   debugger;
 }
 
+// Url to numeric id
 String.prototype.hashCode = function() {
   var hash = 0, i, chr, len;
   if (this.length === 0) return hash;
@@ -31,5 +32,5 @@ function handleNewHash(e) {
 }
 
 // Handle the initial route and browser navigation events
-window.addEventListener('hashchange', handleNewHash, false);
+//window.addEventListener('hashchange', handleNewHash, false);
 handleNewHash()

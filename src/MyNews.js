@@ -1,48 +1,47 @@
-import React, {Component} from 'react'
+import React, { Component } from 'react'
 import request from 'superagent';
-import {get,set} from './store'
-import { List, ListItem,  ListItemContent, ListItemAction } from 'react-mdl/lib/List';
+import { get, set } from './store'
+import { List, ListItem, ListItemContent, ListItemAction } from 'react-mdl/lib/List';
 import { Icon } from 'react-mdl/lib/Icon'
 import IconButton from 'react-mdl/lib/IconButton'
-import Spinner  from 'react-mdl/lib/Spinner'
+import Spinner from 'react-mdl/lib/Spinner'
 
 /**
- * TODO
- * 
- * News list to LocalStorage
- * Save articles when loaded
- * If (wifi) download articles
- * 
- * 
- * Fade in news list with broken icon if article fetch failed
- * ?Local news - select region
  * 
  */
-
 export class MyNews extends Component {
 
-  GN = location.protocol + '//news.google.no/news?cf=all&hl=no&pz=1&ned=no_no&output=rss&num=100'; // b is for cache bust appending
+  GOOGLE_NEWS = location.protocol + '//news.google.no/news?cf=all&hl=no&pz=1&ned=no_no&output=rss&num=100'; // b is for cache bust appending
 
-  YQL = location.protocol + '//query.yahooapis.com/v1/public/yql';
+  YQL = 'https://query.yahooapis.com/v1/public/yql';
 
-  ARTICLE_API = (location.protocol || 'https:') + '//runkit.io/snapper/article/5.1.0'
+  ARTICLE_API =  'https://runkit.io/snapper/article/5.1.0'
 
   normalizeTitle = o => {
     const t = o.title.split(' - ');
-    if(t.length > 1 && t[1].length < 50){
-      o.source = t[1];
+    if (t.length > 1 && t[1].length < 50) {
       t.pop()
     }
-    o.title = t.join()
+    o.title = t.length > 50 ? t.substring(0,50) + ".." : t.join()
+  }
+
+  domainFromUrl(url) {
+    if(url.indexOf('http') < 0) return;
+    var a = document.createElement('a')
+    a.setAttribute('href', url);
+    return a.hostname.replace('www.', '');
   }
 
   createArticleItem = i => {
     this.normalizeTitle(i);
-    return Object.assign({}, i, { 
-      id: i.link.hashCode(), 
-      link: 'http' + i.link.split('http')[2]
+    const result = Object.assign({}, i, {
+      id: i.link.hashCode(),
+      link: 'http' + i.link.split('http')[2],
     })
+    result.source = this.domainFromUrl(result.link) || this.domainFromUrl(i.link.split('http')[1])
+    return result;
   }
+
   query = (...urls) => {
     const all = urls.map(u => `"${u}"`).join(',');
     console.log(all)
@@ -59,7 +58,6 @@ export class MyNews extends Component {
     this.load = this.loadNews.bind(this)
     this.show = this.show.bind(this)
     this.back = this.back.bind(this)
-    this.getArticle = this.getArticle.bind(this)
     // get from cache
     this.state = { news: [], location: props.location }
     if (props.location)
@@ -69,14 +67,15 @@ export class MyNews extends Component {
   componentWillReceiveProps(props, oldProps) {
     if (!props.location && props.refresh) { // silly, move state up
       this.loadNews()
-      return;
-    }
-    if(this.state.news.length && props.location === "download"){
+    } else if (this.state.news.length && props.location === "download") {
       console.log("downloading all..")
-      Promise.all( this.state.news.map( n => this.getArticle(n) )).then( res => console.log("all downloaded", res) )
-      return;
+      Promise.all(this.state.news.map(n => this.getArticle(n)))
+      .then(res => console.log("all downloaded", res))
+      .then(res => this.setState({lastSync: Date.now()}))
+      .catch(x=>{debugger;})
+    } else { 
+      this.show(props.location)
     }
-    this.show(props.location)
   }
 
   componentDidMount() {
@@ -86,14 +85,14 @@ export class MyNews extends Component {
   loadNews() {
     const t = this;
 
-    if(!!get('news')){
-      this.setState({dt: Date.now(), news: get('news')})
+    if (!!get('news')) {
+      this.setState({ dt: Date.now(), news: get('news') })
       return;
     }
 
     return request
       .get(this.YQL)
-      .query(this.query(this.GN))
+      .query(this.query(this.GOOGLE_NEWS))
       //.set('XX-API-Key', 'foobar')
       .set('Accept', 'application/json')
       .end((err, res) => {
@@ -116,8 +115,8 @@ export class MyNews extends Component {
     }
 
     const cachedArticle = get(item.link.hashCode())
-    if(!!cachedArticle){
-      this.setState({selected: cachedArticle, waiting: false})
+    if (!!cachedArticle) {
+      this.setState({ selected: cachedArticle, waiting: false })
       return;
     }
 
@@ -125,38 +124,46 @@ export class MyNews extends Component {
     this.setState({ waiting: true })
 
     this.getArticle(item).then(article => {
-        this.setState({ selected: article, waiting: false })
+      this.setState({ selected: article, waiting: false })
     })
   }
 
-  getArticle(articleRef){
-    console.log("getting", articleRef)
-    return request.get(this.ARTICLE_API).query({ url: articleRef.link, lang: 'no' }).then(res => {
-        if(!res.ok){
+  getArticle = (articleRef) => {
+    const url = `${this.ARTICLE_API}?url=${encodeURIComponent(articleRef.link)}&lang=no`
+    console.log("getting", decodeURIComponent(url), articleRef)
+
+    return request(url)
+      .set('Accept', 'application/json')
+      .then(res => {
+        if (!res.ok) {
           console.log("error", res)
         }
         console.log("runkit", res.body.perf)
         articleRef.waiting = false;
         set(articleRef.link.hashCode(), res.body)
         return res.body;
-      });
+      })
+      // adressa.. always
+      .catch(err=>{/*alert(JSON.stringify(url))*/ articleRef.unsynced = true }); 
   }
 
-  back(){
-    this.setState({selected: null});
-    window.location.hash = null;
+  back() {
+    this.setState({ selected: null });
+    window.location.hash = '';
   }
+
+  time = (item) => new Date(item.pubDate).toLocaleTimeString().split(/\W/).splice(0,2).join(':')
 
   render() {
 
     const spinner = <Spinner style={{ right: '5px', position: 'absolute' }} />;
-    
+
     let article = null;
 
     if (!!this.state.selected) {
-      setTimeout( ()=> {document.getElementById("content").scrollTop = 0}, 200)
+      setTimeout(() => { document.getElementById("content").scrollTop = 0 }, 200)
       article = <div>
-        { this.props.location && <IconButton id="backbtn" name="arrow_back" onClick={ this.back }/>}
+        {this.props.location && <IconButton id="backbtn" name="arrow_back" onClick={this.back} />}
         <h3 style={{ marginLeft: '6px' }}>{this.state.selected.title} {this.state.waiting && spinner} </h3>
         <pre style={{ whiteSpace: 'pre-wrap', marginLeft: '5px', marginRight: '10px', fontSize: '18px', paddingBottom: '40px', fontFamily: 'Georgia,Cambria,"Times New Roman",Times,serif' }}>{this.state.selected.text}</pre>
       </div>
@@ -164,23 +171,23 @@ export class MyNews extends Component {
 
     let t = this;
     var items = this.state.news.map(function (item) {
-      
+
       return article && item.id === t.state.selected.id ? undefined : (
 
-    <a style={{ textDecoration: 'none' }} href={'#' + item.id} key={item.id} >
+        <a style={{ textDecoration: 'none' }} href={'#' + item.id} key={item.id} >
           <ListItem twoLine style={{ paddingBottom: 10, paddingTop: 0, minHeight: 40, borderBottom: '1px solid lightgray' }}>
-            <ListItemContent subtitle={new Date(item.pubDate).toLocaleTimeString() + `  -  ${item.source || ''}`} style={{ padding: 0, minHeight: 0 }}>
+            <ListItemContent subtitle={`${t.time(item)}  -  ${item.source || ''}`} style={{ padding: 0, minHeight: 0, color: item.unsynced ? 'lightgray' : '' }}>
               {item.title} {item.waiting && spinner}
             </ListItemContent>
           </ListItem>
         </a>
       );
-    }).filter(exists=>exists);
+    }).filter(exists => exists);
 
     if (items.length) {
       return (
         <div>
-          { article }
+          {article}
           <List style={{ marginLeft: '6px', marginTop: 0 }}>
             {items}
           </List>

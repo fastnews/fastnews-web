@@ -8,11 +8,6 @@ a{
   cursor: pointer;
 }
 
-#downloadbtn{
-      position: fixed;
-    left: 10px;
-}
-
 #backbtn{
   color: white;
   background-color: rgba(255, 0, 129, 0.62);

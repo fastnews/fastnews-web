@@ -1,0 +1,13 @@
+CACHE MANIFEST
+# v1 2016-01-07
+# TODO: replace TODO after every build
+https://fastnews.github.io/index.html
+https://fastnews.github.io/static/js/main.TODO.js
+https://fastnews.github.io/static/css/main.TODO.css
+https://fastnews.github.io/static/media/logo.TODO.svg
+https://fastnews.github.io/gfont.woff2
+https://fastnews.github.io/favicon.ico
+
+# Use from network if available
+NETWORK:
+*
