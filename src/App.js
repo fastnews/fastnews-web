@@ -13,11 +13,11 @@ class App extends Component {
 
   constructor(props) {
     super(props)
-    this.state = Object.assign({}, props)
+    this.state = { ...props }
   }
 
   componentWillReceiveProps(props) {
-    this.setState(props)
+    this.setState({...props, ...{syncing: (location === "download") }})
   }
 
   refresh = (e) => {
@@ -33,7 +33,7 @@ class App extends Component {
 
   downloadAll = (e) =>{
     e.stopPropagation()
-    this.setState({refresh: false, location: "download", selected: null});
+    this.setState({refresh: false, location: "download", selected: null, syncing: true});
   }
 
   render() {
@@ -42,6 +42,7 @@ class App extends Component {
         <Header title="Siste nyheter" style={{ backgroundColor: 'rgb(61, 51, 148)' }}>
           {!this.state.location && <IconButton name="file_download" id="downloadbtn" onClick={this.downloadAll} />}
           {!this.state.location && <IconButton name="replay" onClick={this.refresh} />}
+          {this.state.syncing && <span>Downloading...</span>}
         </Header>
         {/**      <Drawer title="Meny">
           <Navigation>

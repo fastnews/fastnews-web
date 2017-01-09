@@ -32,5 +32,5 @@ function handleNewHash(e) {
 }
 
 // Handle the initial route and browser navigation events
-//window.addEventListener('hashchange', handleNewHash, false);
+window.addEventListener('hashchange', handleNewHash, false);
 handleNewHash()

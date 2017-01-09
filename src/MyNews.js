@@ -23,6 +23,7 @@ export class MyNews extends Component {
       t.pop()
     }
     o.title = t.length > 50 ? t.substring(0,50) + ".." : t.join()
+    o.title = o.title.substring(0,1).toUpperCase() + o.title.substring(1);
   }
 
   domainFromUrl(url) {
@@ -72,6 +73,7 @@ export class MyNews extends Component {
       Promise.all(this.state.news.map(n => this.getArticle(n)))
       .then(res => console.log("all downloaded", res))
       .then(res => this.setState({lastSync: Date.now()}))
+      .then(res => {location.hash = '/done'})
       .catch(x=>{debugger;})
     } else { 
       this.show(props.location)
@@ -154,7 +156,7 @@ export class MyNews extends Component {
     window.location.hash = '';
   }
 
-  time = (item) => new Date(item.pubDate).toLocaleTimeString().split(/\W/).splice(0,2).join(':')
+  time = (item) => new Date(item.pubDate).toLocaleTimeString("no").split(/\W/).splice(0,2).join(':')
 
   render() {
 
