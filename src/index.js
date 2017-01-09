@@ -26,7 +26,7 @@ String.prototype.hashCode = function() {
 // Split location into `/` separated parts, then render `Application` with it
 function handleNewHash(e) {
   var location = window.location.hash.replace(/^#\/?|\/$/g, '').split('/');
-  var application = <App waiting={!!location[0]} location={location[0]} />;
+  var application = <App waiting={!!location[0]} location={location[0]} refresh={false} />;
   render(application, document.getElementById('root'));
   return false;
 }

@@ -7,27 +7,29 @@ import IconButton from 'react-mdl/lib/IconButton'
 import Spinner from 'react-mdl/lib/Spinner'
 
 /**
- * 
+ * Mobile offline news reader, for areas without 3g coverage
+ * Research on create-react-app, hash routing, cloud functions and appcache fallback for ios safari
+ * The shitty code is "as designed"
  */
 export class MyNews extends Component {
 
-  GOOGLE_NEWS = location.protocol + '//news.google.no/news?cf=all&hl=no&pz=1&ned=no_no&output=rss&num=100'; // b is for cache bust appending
+  GOOGLE_NEWS = location.protocol + '//news.google.no/news?cf=all&hl=no&pz=1&ned=no_no&output=rss&num=100'; 
 
   YQL = 'https://query.yahooapis.com/v1/public/yql';
 
-  ARTICLE_API =  'https://runkit.io/snapper/article/5.1.0'
+  ARTICLE_API = 'https://runkit.io/snapper/article/5.1.0'
 
   normalizeTitle = o => {
     const t = o.title.split(' - ');
     if (t.length > 1 && t[1].length < 50) {
       t.pop()
     }
-    o.title = t.length > 50 ? t.substring(0,50) + ".." : t.join()
-    o.title = o.title.substring(0,1).toUpperCase() + o.title.substring(1);
+    o.title = t.length > 50 ? t.substring(0, 50) + ".." : t.join()
+    o.title = o.title.substring(0, 1).toUpperCase() + o.title.substring(1);
   }
 
   domainFromUrl(url) {
-    if(url.indexOf('http') < 0) return;
+    if (url.indexOf('http') < 0) return;
     var a = document.createElement('a')
     a.setAttribute('href', url);
     return a.hostname.replace('www.', '');
@@ -35,10 +37,13 @@ export class MyNews extends Component {
 
   createArticleItem = i => {
     this.normalizeTitle(i);
-    const result = Object.assign({}, i, {
-      id: i.link.hashCode(),
-      link: 'http' + i.link.split('http')[2],
-    })
+    const result = {
+      ...i,
+      ...{
+        id: i.link.hashCode(),
+        link: 'http' + i.link.split('http')[2],
+      }
+    }
     result.source = this.domainFromUrl(result.link) || this.domainFromUrl(i.link.split('http')[1])
     return result;
   }
@@ -59,23 +64,24 @@ export class MyNews extends Component {
     this.load = this.loadNews.bind(this)
     this.show = this.show.bind(this)
     this.back = this.back.bind(this)
-    // get from cache
+
     this.state = { news: [], location: props.location }
     if (props.location)
       this.show(props.location)
   }
 
   componentWillReceiveProps(props, oldProps) {
-    if (!props.location && props.refresh) { // silly, move state up
+    // ugliest abuse of react, state and routing. ever.
+    if (!props.location && props.refresh) { 
       this.loadNews()
     } else if (this.state.news.length && props.location === "download") {
       console.log("downloading all..")
       Promise.all(this.state.news.map(n => this.getArticle(n)))
-      .then(res => console.log("all downloaded", res))
-      .then(res => this.setState({lastSync: Date.now()}))
-      .then(res => {location.hash = '/done'})
-      .catch(x=>{debugger;})
-    } else { 
+        .then(res => console.log("all downloaded", res))
+        .then(res => this.setState({ lastSync: Date.now() }))
+        .then(res => { location.hash = '/done' })
+        .catch(x => { debugger; })
+    } else {
       this.show(props.location)
     }
   }
@@ -95,14 +101,14 @@ export class MyNews extends Component {
     return request
       .get(this.YQL)
       .query(this.query(this.GOOGLE_NEWS))
-      //.set('XX-API-Key', 'foobar')
       .set('Accept', 'application/json')
       .end((err, res) => {
         if (err || !res.ok) {
           console.log(err);
         } else {
-          this.setState({ dt: Date.now(), news: res.body.query.results.item.map(t.createArticleItem) })
+          this.setState({ dt: Date.now(), news: res.body.query.results.item.map(t.createArticleItem), refresh:false, waiting: false })
           set('news', this.state.news)
+          location.hash = '/done';
         }
       });
   }
@@ -110,9 +116,8 @@ export class MyNews extends Component {
   show(id) {
     const item = this.state.news.find(x => x.id === Number(id));
 
-    // redirect to root if not found
     if (!item) {
-      setTimeout(()=>window.location.hash = "",10);
+      setTimeout(() => window.location.hash = "", 10);
       return
     }
 
@@ -147,8 +152,7 @@ export class MyNews extends Component {
         set(articleRef.link.hashCode(), res.body)
         return res.body;
       })
-      // adressa.. always
-      .catch(err=>{/*alert(JSON.stringify(url))*/ articleRef.unsynced = true }); 
+      .catch(err => {articleRef.unsynced = true });
   }
 
   back() {
@@ -156,7 +160,7 @@ export class MyNews extends Component {
     window.location.hash = '';
   }
 
-  time = (item) => new Date(item.pubDate).toLocaleTimeString("no").split(/\W/).splice(0,2).join(':')
+  time = (item) => new Date(item.pubDate).toLocaleTimeString("no").split(/\W/).splice(0, 2).join(':')
 
   render() {
 

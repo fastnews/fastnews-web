@@ -6,6 +6,7 @@ import { MyNews } from './MyNews';
 import IconButton from 'react-mdl/lib/IconButton'
 import { get } from './store'
 import request from 'superagent'
+import Spinner from 'react-mdl/lib/Spinner'
 
 class App extends Component {
 
@@ -17,7 +18,7 @@ class App extends Component {
   }
 
   componentWillReceiveProps(props) {
-    this.setState({...props, ...{syncing: (location === "download") }})
+    this.setState({ ...props, ...{ syncing: (location === "download") } })
   }
 
   refresh = (e) => {
@@ -31,18 +32,20 @@ class App extends Component {
   //   window.location.reload(true);
   // }
 
-  downloadAll = (e) =>{
+  downloadAll = (e) => {
     e.stopPropagation()
-    this.setState({refresh: false, location: "download", selected: null, syncing: true});
+    this.setState({ refresh: false, location: "download", selected: null, syncing: true });
   }
 
   render() {
+
     return (
       <Layout fixedHeader>
         <Header title="Siste nyheter" style={{ backgroundColor: 'rgb(61, 51, 148)' }}>
           {!this.state.location && <IconButton name="file_download" id="downloadbtn" onClick={this.downloadAll} />}
-          {!this.state.location && <IconButton name="replay" onClick={this.refresh} />}
-          {this.state.syncing && <span>Downloading...</span>}
+          {!this.state.location && !this.state.refresh && <IconButton name="replay" onClick={this.refresh} />}
+          {this.state.refresh && <Spinner/>} 
+          {(this.state.syncing) && <span>Downloading... <Spinner /> </span>}
         </Header>
         {/**      <Drawer title="Meny">
           <Navigation>
