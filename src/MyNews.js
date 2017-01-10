@@ -13,7 +13,7 @@ import Spinner from 'react-mdl/lib/Spinner'
  */
 export class MyNews extends Component {
 
-  GOOGLE_NEWS = location.protocol + '//news.google.no/news?cf=all&hl=no&pz=1&ned=no_no&output=rss&num=100'; 
+  GOOGLE_NEWS = location.protocol + '//news.google.no/news?cf=all&hl=no&pz=1&ned=no_no&output=rss&num=100';
 
   YQL = 'https://query.yahooapis.com/v1/public/yql';
 
@@ -72,7 +72,7 @@ export class MyNews extends Component {
 
   componentWillReceiveProps(props, oldProps) {
     // ugliest abuse of react, state and routing. ever.
-    if (!props.location && props.refresh) { 
+    if (!props.location && props.refresh) {
       this.loadNews()
     } else if (this.state.news.length && props.location === "download") {
       console.log("downloading all..")
@@ -106,7 +106,11 @@ export class MyNews extends Component {
         if (err || !res.ok) {
           console.log(err);
         } else {
-          this.setState({ dt: Date.now(), news: res.body.query.results.item.map(t.createArticleItem), refresh:false, waiting: false })
+          this.setState({
+            dt: Date.now(),
+            news: res.body.query.results.item.map(t.createArticleItem),
+            refresh: false, waiting: false
+          })
           set('news', this.state.news)
           location.hash = '/done';
         }
@@ -136,6 +140,7 @@ export class MyNews extends Component {
   }
 
   getArticle = (articleRef) => {
+
     const url = `${this.ARTICLE_API}?url=${encodeURIComponent(articleRef.link)}&lang=no`
     console.log("getting", decodeURIComponent(url), articleRef)
 
@@ -152,7 +157,7 @@ export class MyNews extends Component {
         set(articleRef.link.hashCode(), res.body)
         return res.body;
       })
-      .catch(err => {articleRef.unsynced = true });
+      .catch(err => { articleRef.unsynced = true });
   }
 
   back() {
@@ -161,6 +166,19 @@ export class MyNews extends Component {
   }
 
   time = (item) => new Date(item.pubDate).toLocaleTimeString("no").split(/\W/).splice(0, 2).join(':')
+
+  css = {
+    title: { padding: 0, minHeight: 0, color: item.unsynced ? 'lightgray' : '' },
+    list_item: { paddingBottom: 10, paddingTop: 0, minHeight: 40, borderBottom: '1px solid lightgray' },
+    article_text: {
+      whiteSpace: 'pre-wrap',
+      marginLeft: '5px', 
+      marginRight: '10px', 
+      fontSize: '18px', 
+      paddingBottom: '40px', 
+      fontFamily: 'Georgia,Cambria,"Times New Roman",Times,serif'
+    }
+  };
 
   render() {
 
@@ -173,7 +191,7 @@ export class MyNews extends Component {
       article = <div>
         {this.props.location && <IconButton id="backbtn" name="arrow_back" onClick={this.back} />}
         <h3 style={{ marginLeft: '6px' }}>{this.state.selected.title} {this.state.waiting && spinner} </h3>
-        <pre style={{ whiteSpace: 'pre-wrap', marginLeft: '5px', marginRight: '10px', fontSize: '18px', paddingBottom: '40px', fontFamily: 'Georgia,Cambria,"Times New Roman",Times,serif' }}>{this.state.selected.text}</pre>
+        <pre style={this.css.article_text}>{this.state.selected.text}</pre>
       </div>
     }
 
@@ -183,8 +201,8 @@ export class MyNews extends Component {
       return article && item.id === t.state.selected.id ? undefined : (
 
         <a style={{ textDecoration: 'none' }} href={'#' + item.id} key={item.id} >
-          <ListItem twoLine style={{ paddingBottom: 10, paddingTop: 0, minHeight: 40, borderBottom: '1px solid lightgray' }}>
-            <ListItemContent subtitle={`${t.time(item)}  -  ${item.source || ''}`} style={{ padding: 0, minHeight: 0, color: item.unsynced ? 'lightgray' : '' }}>
+          <ListItem twoLine style={this.css.list_item}>
+            <ListItemContent subtitle={`${t.time(item)}  -  ${item.source || ''}`} style={this.css.title}>
               {item.title} {item.waiting && spinner}
             </ListItemContent>
           </ListItem>

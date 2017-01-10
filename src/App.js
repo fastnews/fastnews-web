@@ -22,30 +22,40 @@ class App extends Component {
   }
 
   refresh = (e) => {
-    e.stopPropagation()
-    window.localStorage.clear()
-    this.setState({ refresh: true, location: "", selected: null });
+    if (navigator.onLine) {
+      e.stopPropagation()
+      window.localStorage.clear()
+      this.setState({ refresh: true, location: "", selected: null });
+    }
   }
 
-  // refreshPage() {
-  //   window.location.hash = "";
-  //   window.location.reload(true);
-  // }
-
   downloadAll = (e) => {
-    e.stopPropagation()
-    this.setState({ refresh: false, location: "download", selected: null, syncing: true });
+    if (navigator.onLine) {
+      e.stopPropagation()
+      this.setState({ refresh: false, location: "download", selected: null, syncing: true });
+    }
   }
 
   render() {
 
+    const download = (
+      !this.state.location &&
+      navigator.onLine &&
+      <IconButton name="file_download" id="downloadbtn" onClick={this.downloadAll} />)
+
+    const refresh = (
+      !this.state.location &&
+      !this.state.refresh &&
+      navigator.onLine && <IconButton name="replay" onClick={this.refresh} />)
+
     return (
       <Layout fixedHeader>
         <Header title="Siste nyheter" style={{ backgroundColor: 'rgb(61, 51, 148)' }}>
-          {!this.state.location && <IconButton name="file_download" id="downloadbtn" onClick={this.downloadAll} />}
-          {!this.state.location && !this.state.refresh && <IconButton name="replay" onClick={this.refresh} />}
-          {this.state.refresh && <Spinner/>} 
-          {(this.state.syncing) && <span>Downloading... <Spinner /> </span>}
+          {download}
+          {refresh}
+          {this.state.refresh && <Spinner />}
+          {this.state.syncing && <span>Laster ned... <Spinner /> </span>}
+          {!navigator.onLine && <span>(offline)</span>}
         </Header>
         {/**      <Drawer title="Meny">
           <Navigation>
